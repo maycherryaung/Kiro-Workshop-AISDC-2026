@@ -55,5 +55,5 @@ export function useTasks() {
     setTasks(prev => prev.map(t => t.id === id ? task : t));
   };
 
-  return { tasks, priorities, categories, loading, error, addTask, editTask, removeTask, changeStatus, refetch: fetchAll };
+  return { tasks, setTasks, priorities, categories, loading, error, addTask, editTask, removeTask, changeStatus, refetch: fetchAll };
 }

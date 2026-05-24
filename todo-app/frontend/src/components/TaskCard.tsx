@@ -7,6 +7,10 @@ interface Props {
   onDelete:     (task: Task) => void;
   onStatusChange: (task: Task, status: Task["status"]) => void;
   onClick:      (task: Task) => void;
+  isDragging:   boolean;
+  isInFlight:   boolean;
+  onDragStart:  (e: React.DragEvent) => void;
+  onDragEnd:    (e: React.DragEvent) => void;
 }
 
 const STATUS_NEXT: Record<Task["status"], { label: string; value: Task["status"] }> = {
@@ -15,7 +19,7 @@ const STATUS_NEXT: Record<Task["status"], { label: string; value: Task["status"]
   completed:   { label: "↩ Reopen",  value: "todo"         },
 };
 
-export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onClick }: Props) {
+export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onClick, isDragging, isInFlight, onDragStart, onDragEnd }: Props) {
   const isOverdue =
     task.due_date &&
     task.status !== "completed" &&
@@ -23,12 +27,16 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onCli
 
   return (
     <article
-      className={`task-card priority-${task.priority.name.toLowerCase()}`}
+      className={`task-card priority-${task.priority.name.toLowerCase()}${isDragging ? " dragging" : ""}${isInFlight ? " in-flight" : ""}`}
       onClick={() => onClick(task)}
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === "Enter" && onClick(task)}
       aria-label={`Task: ${task.title}`}
+      draggable={!isInFlight}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      aria-grabbed={isDragging}
     >
       {/* Priority stripe */}
       <div className="task-card__stripe" aria-hidden="true" />
@@ -67,7 +75,7 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onCli
       <div className="task-card__actions" onClick={e => e.stopPropagation()}>
         <button
           className="btn btn--ghost btn--sm"
-          onClick={() => onStatusChange(task, STATUS_NEXT[task.status].value)}
+          onClick={e => { e.stopPropagation(); onStatusChange(task, STATUS_NEXT[task.status].value); }}
           title={STATUS_NEXT[task.status].label}
           aria-label={STATUS_NEXT[task.status].label}
         >
@@ -75,7 +83,7 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onCli
         </button>
         <button
           className="btn btn--ghost btn--sm btn--icon"
-          onClick={() => onEdit(task)}
+          onClick={e => { e.stopPropagation(); onEdit(task); }}
           title="Edit task"
           aria-label="Edit task"
         >
@@ -83,7 +91,7 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange, onCli
         </button>
         <button
           className="btn btn--ghost btn--sm btn--icon btn--danger"
-          onClick={() => onDelete(task)}
+          onClick={e => { e.stopPropagation(); onDelete(task); }}
           title="Delete task"
           aria-label="Delete task"
         >

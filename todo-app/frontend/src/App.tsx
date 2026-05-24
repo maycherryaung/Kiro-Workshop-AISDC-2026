@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useTasks } from "./hooks/useTasks";
+import { useDragDrop } from "./hooks/useDragDrop";
 import KanbanColumn    from "./components/KanbanColumn";
 import TaskFormModal   from "./components/TaskFormModal";
 import TaskDetailModal from "./components/TaskDetailModal";
@@ -19,8 +20,28 @@ const COLUMNS: { status: Task["status"]; title: string; emoji: string }[] = [
 ];
 
 export default function App() {
-  const { tasks, priorities, categories, loading, error, addTask, editTask, removeTask, changeStatus } = useTasks();
+  const { tasks, setTasks, priorities, categories, loading, error, addTask, editTask, removeTask, changeStatus } = useTasks();
   const [modal, setModal] = useState<Modal | null>(null);
+
+  // ── Error banner state (5.3) ────────────────────────────────────────────────
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const onError = useCallback((message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), 5000);
+  }, []);
+
+  // ── Drag-and-drop (5.2) ─────────────────────────────────────────────────────
+  const {
+    draggedTaskId,
+    dragOverColumn,
+    inFlightTaskIds,
+    onDragStart,
+    onDragEnd,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+  } = useDragDrop({ tasks, setTasks, changeStatus, onError });
 
   // ── Derived counts ──────────────────────────────────────────────────────────
   const completed = tasks.filter(t => t.status === "completed").length;
@@ -75,6 +96,20 @@ export default function App() {
         </button>
       </header>
 
+      {/* ── Error banner (5.4) ── */}
+      {errorMessage && (
+        <div className="drag-error-banner" role="alert" aria-live="assertive">
+          <span>⚠️ {errorMessage}</span>
+          <button
+            className="drag-error-banner__close"
+            onClick={() => setErrorMessage(null)}
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ── Main board ── */}
       <main className="board" aria-label="Task board">
         {loading && (
@@ -103,6 +138,14 @@ export default function App() {
                 onDelete={handleDelete}
                 onStatusChange={(task, status) => changeStatus(task.id, status)}
                 onCardClick={task => setModal({ type: "detail", task })}
+                isDragOver={dragOverColumn === col.status}
+                onDragOver={(e) => onDragOver(col.status, e)}
+                onDragLeave={onDragLeave}
+                onDrop={(e) => onDrop(col.status, e)}
+                draggedTaskId={draggedTaskId}
+                inFlightTaskIds={inFlightTaskIds}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
               />
             ))}
           </div>
